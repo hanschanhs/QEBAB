@@ -2,7 +2,9 @@
 Variational, hybrid computing methods for quantum chemistry
 
 Operators:
-Unitary Coupled Cluster (singles and doubles)
+- Unitary Coupled Cluster Singles and Doubles
+- Unitary Coupled Cluster Generalised Singles and Doubles
+- Unitary Coupled Cluster Generalised Singles and paired Doubles
 
 Ansatz build types:
 - UCCSD
@@ -13,8 +15,6 @@ Ansatz build types:
 Reference types:
 - singlets
 - triplets
-- open shell
-- closed shell
 
 Calculation types:
 - VQE

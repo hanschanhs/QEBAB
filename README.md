@@ -29,4 +29,5 @@ _Reference circuits_
 - singlet (Hartree-Fock) reference
 - triplet (first excited) reference
 
-Build examples use For ground state VQE calculations,  
+Build examples use Variational Quantum Deflation (VQD).
+For ground state VQE calculations, set the number of eigenstates recovered to 1.  

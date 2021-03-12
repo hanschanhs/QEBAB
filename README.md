@@ -11,7 +11,7 @@ $ conda activate qebab
 ```console
 $ mkdir QEBAB
 $ cd QEBAB
-$ git clone https://github.com/hanschanhs/QEBAB
+$ git clone https://github.com/hanschanhs/QEBAB.git
 ```
 3. Install required packages 
 

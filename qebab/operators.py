@@ -87,20 +87,15 @@ class OperatorPool:
         assert(len(self.qubit_paulistrs)==self.n_ops)
         
         # Check for unique Pauli Strings
-        flag = False
+        flag = True
         if flag == True:
             counter = 0
-            cache = []
             for i,j in itertools.combinations(range(self.n_ops),2):
                 op_dici = self.qubit_paulistrs[i]
                 op_dicj = self.qubit_paulistrs[j]
 
                 repeated_str = [op_dici[key] for key in op_dici.keys() & op_dicj.keys()]
                 if len(repeated_str) != 0:
-                    # if i and j in cache:
-                    #     pass
-                    # else:
-                    #     cache.extend([i,j])
                     counter += len(repeated_str)
                     print("  Flag: Operators {} and {} share {} Paulis.".format(i,j,len(repeated_str)))
                 
@@ -174,7 +169,8 @@ class sUpCCGSD_Pool(OperatorPool):
     def generate_FermionOperators(self):
         """
         """
-        print("Form singlet UpCCGSD operators pool: ")
+        print("Form spin-adapted UpCCGSD operators pool: ")
+        mo_excitations = list(itertools.combinations(range(0, self.n_orb), 2))
         self.fermi_ops = []
 
         # Construct general singles
@@ -188,16 +184,16 @@ class sUpCCGSD_Pool(OperatorPool):
                 qb = 2*q+1
 
                 if p > q:
-                    #if True:
                     termA = FermionOperator(((qa, 1), (pa, 0)))
                     termA -= hermitian_conjugated(termA)
                     termB = FermionOperator(((qb, 1), (pb, 0)))
                     termB -= hermitian_conjugated(termB)
                     op = termA + termB
+                    op = normal_ordered(op)
                     self.fermi_ops.append(op)
 
-        #Construct general doubles
-        print(' Construct doubles')
+        # Construct general paired doubles
+        print(' Construct paired doubles')
         spatial_orb = list(range(self.n_orb))
         n_double_amps = len(list(itertools.combinations(spatial_orb, 2)))
         t_qq_pp = [1] * n_double_amps
@@ -218,7 +214,103 @@ class sUpCCGSD_Pool(OperatorPool):
             op = normal_ordered(op)
             self.fermi_ops.append(op)
 
+
+        # Tally up operators
         self.n_ops = len(self.fermi_ops)
+        assert(self.n_ops==len(mo_excitations)*2)
+        print(" Total No. of operators: ", self.n_ops)
+        print("")
+        
+        return
+
+
+
+class sUCCGSD_Pool(OperatorPool):
+    def generate_FermionOperators(self):
+        """
+        Generator for spin-adapted generalised excitations:
+        - For each unique pairs of spatial MOs:
+            - single electron excitations
+            - paired electron excitations
+        - For each 2 pairs of spatial orbitals:
+            - 
+        """
+        print("Form spin-adapted UCCGSD operators pool: ")
+        mo_excitations = list(itertools.combinations(range(0, self.n_orb), 2))
+        self.fermi_ops = []
+
+        # Construct general singles
+        print(' Construct singles')
+        for p in range(self.n_orb):
+            for q in range(self.n_orb):
+                pa = 2*p
+                qa = 2*q
+
+                pb = 2*p+1
+                qb = 2*q+1
+
+                if p > q:
+                    termA = FermionOperator(((qa, 1), (pa, 0)))
+                    termA -= hermitian_conjugated(termA)
+                    termB = FermionOperator(((qb, 1), (pb, 0)))
+                    termB -= hermitian_conjugated(termB)
+                    op = termA + termB
+                    op = normal_ordered(op)
+                    self.fermi_ops.append(op)
+
+        # Construct general paired doubles
+        print(' Construct paired doubles')
+        spatial_orb = list(range(self.n_orb))
+        n_double_amps = len(list(itertools.combinations(spatial_orb, 2)))
+        t_qq_pp = [1] * n_double_amps
+
+        double_excitations = []
+        for i, (p, q) in enumerate(itertools.combinations(spatial_orb, 2)):
+            pa = 2*p
+            qa = 2*q
+
+            pb = 2*p+1
+            qb = 2*q+1
+
+            double_excitations.append([[qa, pa, qb, pb], t_qq_pp[i]])
+
+        empty_sing_amps = []
+        for item in double_excitations:
+            op = uccsd_generator(empty_sing_amps, [item])
+            op = normal_ordered(op)
+            self.fermi_ops.append(op)
+
+
+        # Construct general non-paired doubles
+        # (every double-excitation contains one alpha->alpha and one beta->beta)
+        print(' Construct non-paired doubles')
+        np_mo_excitations = list(itertools.combinations(mo_excitations, 2))
+        for i,j in np_mo_excitations:
+            # from i:
+            mo_qa = 2*i[0]
+            mo_qb = 2*i[0]+1
+            mo_pa = 2*i[1]
+            mo_pb = 2*i[1]+1
+            
+            # from j:
+            mo_sa = 2*j[0]
+            mo_sb = 2*j[0]+1
+            mo_ra = 2*j[1]
+            mo_rb = 2*j[1]+1
+
+            # alpha-ex from i, beta-ex from j
+            termA = FermionOperator(((mo_qa, 1), (mo_pa, 0), (mo_sb, 1), (mo_rb, 0)))
+            termA -= hermitian_conjugated(termA)    
+            # beta-ex from i, alpha-ex from j
+            termB = FermionOperator(((mo_qb, 1), (mo_pb, 0), (mo_sa, 1), (mo_ra, 0)))
+            termB -= hermitian_conjugated(termB)
+            op = termA + termB
+            op = normal_ordered(op)
+            self.fermi_ops.append(op)
+
+        # Tally up operators
+        self.n_ops = len(self.fermi_ops)
+        assert(self.n_ops==len(mo_excitations)*2+len(np_mo_excitations))
         print(" Total No. of operators: ", self.n_ops)
         print("")
         
@@ -343,114 +435,63 @@ class sUCCSD_Pool(OperatorPool):
 
         return
 
-        
 
 
-class sUCCGSD_Pool(OperatorPool):
+
+
+class alpha_singles_Pool(OperatorPool):
     def generate_FermionOperators(self):
         """
-        WARNING: THIS IS INTENDED TO ONLY WORK FOR H2
-        These are the types of general singlet operators:
-        - For each unique pair of spatial MOs:
-            - single electron hops from one MO to the other
-            - double electron hops from one MO to the other
-            - cross electron hops e.g. t_{03}^{12}
-        - For each 2 pairs of spatial orbitals:
-            - 
         """
-        print("WARNING: Form H2 singlet UCCGSD operators pool: ")
-
-        # GENERATE OPERATORS
+        print("Form alpha single operators pool: ")
         self.fermi_ops = []
-        spin_index_functions = [up_index, down_index]
-        coeff = 1.0
 
-        # Generate all spin-conserving single and double excitations derived from one spatial occupied-virtual pair
-        for i, (p, q) in enumerate(itertools.product(range(self.n_vir), range(self.n_occ))):
-            # list of operators sharing the same amplitude (indexed i)
-            singles_i = FermionOperator()
-            singles_t_i = FermionOperator()
-            doubles1_i = FermionOperator()
-            
-            # Get indices of spatial orbitals
-            virtual_spatial = self.n_occ + p
-            occupied_spatial = q
+        # Construct general singles
+        print(' Construct singles')
+        for p in range(self.n_orb):
+            for q in range(self.n_orb):
+                pa = 2*p
+                qa = 2*q
 
-            for spin in range(2):
-                # Get the functions which map a spatial orbital index to a spin orbital index
-                this_index = spin_index_functions[spin]
-                other_index = spin_index_functions[1 - spin]
+                pb = 2*p+1
+                qb = 2*q+1
 
-                # Get indices of spin orbitals
-                virtual_this = this_index(virtual_spatial)
-                virtual_other = other_index(virtual_spatial)
-                occupied_this = this_index(occupied_spatial)
-                occupied_other = other_index(occupied_spatial)
+                if p > q:
+                    #if True:
+                    termA = FermionOperator(((qa, 1), (pa, 0)))
+                    termA -= hermitian_conjugated(termA)
+                    # termB = FermionOperator(((qb, 1), (pb, 0)))
+                    # termB -= hermitian_conjugated(termB)
+                    op = termA #+ termB
+                    self.fermi_ops.append(op)
 
-                # SINGLES (sing)
-                singles_i += FermionOperator(((virtual_this, 1),(occupied_this, 0)),
-                                             coeff)
-                singles_i += FermionOperator(((occupied_this, 1),(virtual_this, 0)),
-                                             -coeff)
+        # #Construct general doubles
+        # print(' Construct doubles')
+        # spatial_orb = list(range(self.n_orb))
+        # n_double_amps = len(list(itertools.combinations(spatial_orb, 2)))
+        # t_qq_pp = [1] * n_double_amps
 
-                # SINGLES (trip)
-                singles_t_i += FermionOperator(((virtual_this, 1),(occupied_other, 0)),
-                                                coeff)
-                singles_t_i -= hermitian_conjugated(singles_t_i)
+        # double_excitations = []
+        # for i, (p, q) in enumerate(itertools.combinations(spatial_orb, 2)):
+        #     pa = 2*p
+        #     qa = 2*q
 
-                # DOUBLES
-                doubles1_i += FermionOperator((
-                                            (virtual_this, 1),
-                                            (occupied_this, 0),
-                                            (virtual_other, 1),
-                                            (occupied_other, 0)),
-                                            coeff)
-                doubles1_i += FermionOperator((
-                                            (occupied_other, 1),
-                                            (virtual_other, 0),
-                                            (occupied_this, 1),
-                                            (virtual_this, 0)),
-                                            -coeff)
+        #     pb = 2*p+1
+        #     qb = 2*q+1
 
-                # DOUBLECROSS
-                # doublecross_i += FermionOperator((
-                #                                 (occupied_other, 1),
-                #                                 (occupied_this, 0),
-                #                                 (virtual_this, 1),
-                #                                 (virtual_other, 0)),
-                #                                 coeff)
-                # doublecross_i += FermionOperator((
-                #                                 (virtual_other, 1),
-                #                                 (virtual_this, 0),
-                #                                 (occupied_this, 1),
-                #                                 (occupied_other, 0)),
-                #                                 -coeff)
+        #     double_excitations.append([[qa, pa, qb, pb], t_qq_pp[i]])
 
-            doublecross_i = FermionOperator((
-                                            (1, 1),
-                                            (0, 0),
-                                            (2, 1),
-                                            (3, 0)),
-                                            coeff)
-            doublecross_i -= hermitian_conjugated(doublecross_i)
-                
-            self.fermi_ops.append(singles_i)
-            self.fermi_ops.append(singles_t_i)
-            # print(singles_i)
-            # print("")
-            self.fermi_ops.append(doubles1_i)
-            # print(doubles1_i)
-            # print("")
-            # self.fermi_ops.append(doublecross_i)
-            #print(doublecross_i)
+        # empty_sing_amps = []
+        # for item in double_excitations:
+        #     op = uccsd_generator(empty_sing_amps, [item])
+        #     op = normal_ordered(op)
+        #     self.fermi_ops.append(op)
 
         self.n_ops = len(self.fermi_ops)
         print(" Total No. of operators: ", self.n_ops)
         print("")
         
         return
-
-
         
 
 
@@ -458,15 +499,22 @@ class sUCCGSD_Pool(OperatorPool):
 
 
 if __name__ == "__main__":
-    pool = sUpCCGSD_Pool()
+    pool = sUCCGSD_Pool()
     pool.init(n_orb=6,n_occ=2,n_vir=4)
-
-
+    
+    print("~~~~~~~~~~~~~~~")
+    exit()
+    print("FermionOperator")
     for i in pool.fermi_ops:
         print(i)
         print("")
-
+    
+    print("QubitOperator")
+    for i in pool.qubit_ops:
+        print(i)
+        print("")
 
     print(" QubitPauliString: ")
     for i in pool.qubit_paulistrs:
-        print(len(i))
+        print(i)
+        print("")

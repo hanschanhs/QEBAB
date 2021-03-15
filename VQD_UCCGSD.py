@@ -4,8 +4,9 @@ import json
 
 from qebab import *
 
-from pytket.backends.ibm import AerBackend, AerStateBackend, IBMQBackend
-from pytket.backends.projectq import ProjectQBackend
+#from pytket.backends.ibm import AerBackend, AerStateBackend, IBMQBackend
+#from pytket.backends.projectq import ProjectQBackend
+from pytket.extensions.qulacs import QulacsGPUBackend, QulacsBackend
 
 from openfermionpyscf import run_pyscf
 from openfermion import MolecularData
@@ -21,16 +22,16 @@ run_scf = 1
 delete_input = True
 delete_output = True
 
-pool = sUpCCGSD_Pool()              # Operator Pool
+pool = sUCCGSD_Pool()              # Operator Pool
 constructor = k_UCC_Ansatz          # Ansatz constructor
-reference = "s0"                    # Qubit reference state
-backend = ProjectQBackend()         # Backend for simulation
+reference = "t1"                    # Qubit reference state
+backend = QulacsGPUBackend()         # Backend for simulation
 opt_method = "L-BFGS-B" #"Nelder-Mead"
 opt_maxiter = 150
 
 vqd_maxiter = 2
 beta = 3.0
-k = 2
+k = 1
 
 ########### MAIN QUANTUM ROUTINE ##########
 print("\n")
@@ -64,7 +65,7 @@ for point in [0.91]:#range(1, n_points + 1):
     ham_qubit.compress() # Now in QubitOperator form
 
     print(' HF:', molecule.hf_energy)
-    MolecularMeta['FCI eigenstates'] = run_FCI(molecule, vqd_maxiter+8)
+    MolecularMeta['FCI eigenstates'] = run_FCI(molecule, vqd_maxiter+3)
     
     # Generate operator pool and state preparation circuit
     # (reusable for any geometry and eigenstate!)
@@ -137,5 +138,5 @@ for point in [0.91]:#range(1, n_points + 1):
 
     molecules.append(MolecularMeta)
 
-with open(jim.replace('_'+str(bond_length),'') + '.json', 'w') as json_file:
-    json.dump(molecules, json_file)
+    with open(jim.replace('_'+str(bond_length),'') + '.json', 'w') as json_file:
+        json.dump(molecules, json_file)

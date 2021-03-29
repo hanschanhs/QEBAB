@@ -3,6 +3,7 @@ from openfermion import MolecularData
 from openfermionpyscf import run_pyscf
 import numpy as np
 import pyscf
+import json
 
 
 def run_FCI(molecule: MolecularData, roots: int):
@@ -81,13 +82,15 @@ if __name__ == "__main__":
 
      basis = 'sto-3g'    # Orbital basis set
      multiplicity = 1    # Spin of reference determinant
-     n_points = 30   # Number of geometries 
+     n_points = 60   # Number of geometries 
      bond_length_interval = 4.0 / n_points
 
      run_scf = 1
      run_ccsd = 1
 
-     for point in [1.0]:# range(1, n_points + 1):
+     molecules = []
+
+     for point in range(1, n_points + 1):
           bond_length = bond_length_interval * float(point) + 0.2
           geometry = [('H', (0., 0., 0.)), ('Li', (0., 0., bond_length))]
           
@@ -99,7 +102,12 @@ if __name__ == "__main__":
 
           molecule = run_pyscf(molecule,
                               run_scf=run_scf)
+                              
+          MolecularMeta['Geo'] = bond_length
+          MolecularMeta['FCI eigenstates'] = run_FCI(molecule, roots=8)
 
-          fc = run_FCI(molecule, roots=8)
-          #ccs = run_CCSD(molecule, roots=3, ref='t1')
-          break
+          molecules.append(MolecularMeta)
+     
+     with open('FCI_H1-Li1_sto-3g.json', 'w') as json_file:
+          json.dump(molecules, json_file)
+          

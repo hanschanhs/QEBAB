@@ -27,7 +27,7 @@ constructor = k_UCC_Ansatz          # Ansatz constructor
 reference = "t1"                    # Qubit reference state
 backend = QulacsGPUBackend()         # Backend for simulation
 opt_method = "L-BFGS-B" #"Nelder-Mead"
-opt_maxiter = 150
+opt_maxiter = 300
 
 vqd_maxiter = 2
 beta = 3.0
@@ -42,8 +42,8 @@ print(" ------------------------------------------------------------------------
 molecules = []
 symbolic_ansatz = None
 
-for point in [0.91]:#range(1, n_points + 1):
-    bond_length = point#bond_length_interval * float(point) + 0.2
+for point in [2.98]: #range(1, n_points + 1):
+    bond_length = point #bond_length_interval * float(point) + 0.2
     geometry = [('Li', (0., 0., 0.)), ('H', (0., 0., bond_length))]
     
     MolecularMeta = {}
@@ -97,12 +97,12 @@ for point in [0.91]:#range(1, n_points + 1):
                                       eigen_ansatze=opt_eigenansatze,
                                       beta=beta)
         # Generate initial guess params
-        if len(molecules) == 0:
-            initial_params = [np.random.uniform(0,0.01) for i in range(len(symbols))] 
-        else:
-            last_Meta = molecules[-1]
-            last_params = last_Meta['Optimised parameters']
-            initial_params = last_params[len(opt_eigenenergies)]
+        # if len(molecules) == 0:
+        initial_params = [np.random.uniform(0,0.01) for i in range(len(symbols))] 
+        # else:
+        #     last_Meta = molecules[-1]
+        #     last_params = last_Meta['Optimised parameters']
+        #     initial_params = last_params[len(opt_eigenenergies)]
 
         # Energy optimisation
         start_t = timeit.default_timer()

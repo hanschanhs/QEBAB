@@ -4,8 +4,7 @@ import json
 
 from qebab import *
 
-from pytket.backends.ibm import AerBackend, AerStateBackend, IBMQBackend
-from pytket.backends.projectq import ProjectQBackend
+from pytket.extensions.qulacs import QulacsGPUBackend
 
 from openfermionpyscf import run_pyscf
 from openfermion import MolecularData
@@ -23,8 +22,8 @@ delete_output = True
 
 pool = sUpCCGSD_Pool()             # *Operator pool
 constructor = ADAPT_VQD_Ansatz     # Ansatz constructor
-reference = "t1"                   # *Qubit reference states
-backend = AerStateBackend()        # Backend for simulation
+reference = "s0"                   # *Qubit reference states
+backend = QulacsGPUBackend()        # Backend for simulation
 opt_method = "L-BFGS-B"
 opt_maxiter = 400
 
@@ -43,8 +42,8 @@ print(" ------------------------------------------------------------------------
 molecules = []
 SymbolicAnsatz = None
 
-for point in range(1, n_points + 1):
-     bond_length = bond_length_interval * float(point) + 0.2
+for point in [3.0]:#range(1, n_points + 1):
+     bond_length = point#bond_length_interval * float(point) + 0.2
      geometry = [('Li', (0., 0., 0.)), ('H', (0., 0., bond_length))]
      
      MolecularMeta = {}
@@ -160,25 +159,16 @@ for point in range(1, n_points + 1):
 
      MolecularMeta['Gate depth, CX depth'] = eigencirc
      MolecularMeta['VQD (Adaptive) Energies'] = opt_eigenenergies
-     MolecularMeta['Parameters'] = opt_eigenparams
+     MolecularMeta['Parameters'] = opt_eigen_params
      MolecularMeta['Operators'] = opt_eigen_ops
      MolecularMeta['Time'] = eigentimes
 
      molecules.append(MolecularMeta)
 
 
-if refs[0]=='s0':
+if reference=='s0':
      with open('sRef_sUp_' + jim.replace('_singlet_'+str(bond_length),'') + '.json', 'w') as json_file:
          json.dump(molecules, json_file)
-
-elif refs[0]=='t1':
+else:
      with open('tRef_sUp_' + jim.replace('_singlet_'+str(bond_length),'') + '.json', 'w') as json_file:
-         json.dump(molecules, json_file)
-
-elif refs[0]=='open shell':
-     with open('osRef_sUp_' + jim.replace('_singlet_'+str(bond_length),'') + '.json', 'w') as json_file:
-         json.dump(molecules, json_file)
-
-elif refs[0]=='closed shell':
-     with open('csRef_sUp_' + jim.replace('_singlet_'+str(bond_length),'') + '.json', 'w') as json_file:
          json.dump(molecules, json_file)

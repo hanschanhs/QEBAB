@@ -1,6 +1,6 @@
 from qebab.operators import *
 from qebab.references import *
-from qebab.energy_expectation import gen_overlap
+from qebab.expectation import gen_overlap
 
 from math import sqrt
 

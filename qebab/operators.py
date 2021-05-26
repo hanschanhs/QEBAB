@@ -2,7 +2,7 @@ import numpy as np
 import itertools
 
 from openfermion import *
-from openfermion import transforms
+from openfermion.linalg import get_number_preserving_sparse_operator
 from pytket.pauli import Pauli, QubitPauliString
 from pytket.circuit import Qubit
 from pytket import Circuit
@@ -35,6 +35,7 @@ class OperatorPool:
         self.generate_FermionOperators()
         self.generate_QubitOperators()
         self.generate_QubitPauliString()
+        self.generate_SparseMatrix()
 
 
     def generate_FermionOperators(self):
@@ -109,7 +110,7 @@ class OperatorPool:
         self.spmat_ops = []
         print("Form Sparse Matrices for operators in pool ")
         for op in self.fermi_ops:
-            self.spmat_ops.append(transforms.get_sparse_operator(op, n_qubits = self.n_spin_orb))
+            self.spmat_ops.append(get_number_preserving_sparse_operator(op, self.n_spin_orb, self.n_electrons))
         assert(len(self.spmat_ops) == self.n_ops)
 
 
@@ -503,18 +504,24 @@ if __name__ == "__main__":
     pool.init(n_orb=6,n_occ=2,n_vir=4)
     
     print("~~~~~~~~~~~~~~~")
-    exit()
-    print("FermionOperator")
-    for i in pool.fermi_ops:
-        print(i)
-        print("")
     
-    print("QubitOperator")
-    for i in pool.qubit_ops:
-        print(i)
-        print("")
+    # print("FermionOperator")
+    # for i in pool.fermi_ops:
+    #     print(i)
+    #     print("")
+    
+    # print("QubitOperator")
+    # for i in pool.qubit_ops:
+    #     print(i)
+    #     print("")
 
-    print(" QubitPauliString: ")
-    for i in pool.qubit_paulistrs:
+    # print(" QubitPauliString: ")
+    # for i in pool.qubit_paulistrs:
+    #     print(i)
+    #     print("")
+
+    print(type(pool.spmat_ops))
+    exit()
+    for i in pool.spmat_ops:
         print(i)
         print("")

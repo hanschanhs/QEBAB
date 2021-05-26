@@ -8,10 +8,12 @@ from pytket.passes import OptimisePhaseGadgets, RemoveRedundancies, SequencePass
 from pytket.utils import expectation_from_counts, expectation_from_shots, append_pauli_measurement
 from pytket.utils.operators import QubitPauliOperator
 
-from openfermion import QubitOperator
+from openfermion import QubitOperator, FermionOperator
 from scipy.optimize import minimize
 
 
+
+##### OVERLAPS #####
 def get_zero_state_probability(circ: Circuit, backend: Backend):
     if backend.supports_state:
         statevector = backend.get_state(circ)
@@ -20,7 +22,7 @@ def get_zero_state_probability(circ: Circuit, backend: Backend):
 
     return abs(statevector[0])**2
 
-#@profile
+
 def gen_overlap(a_circ: Circuit, b_circ: Circuit, backend: Backend):
     """Overlap measurement
     Args:
@@ -41,7 +43,7 @@ def gen_overlap(a_circ: Circuit, b_circ: Circuit, backend: Backend):
     return prob_X
 
 
-
+##### ENERGY #####
 def gen_vqd_objective(ansatz: Circuit,
                         symbols: dict,
                         hamiltonian: QubitOperator,
@@ -79,8 +81,60 @@ def gen_vqd_objective(ansatz: Circuit,
     return objective_function  
 
 
+##### SPIN #####
+def get_spin_expectation(ansatz: Circuit, symbols: dict, optimised_params, spin_op, backend: Backend):
+
+    ansatz_at_params = ansatz.copy()
+    symbol_map = dict(zip(symbols, optimised_params))
+    ansatz_at_params.symbol_substitution(symbol_map)
+    spin_sq = backend.get_operator_expectation_value(ansatz_at_params, spin_op)
+
+    return spin_sq
+
+
+
+def gen_spin_operator(n_tot):
+    """n_tot: number of molecular orbitals
+    """
+    spin_op = FermionOperator()
+
+    for p in range(n_tot):
+        for q in range(n_tot):
+            # Term 1: S+S-
+            p_alpha = 2*p
+            p_beta = 2*p+1
+            q_alpha = 2*q
+            q_beta = 2*q+1
+
+            splus_sminus = (
+            FermionOperator(((p_alpha, 1), (p_beta, 0), (q_beta, 1), (q_alpha, 0)))
+            )
+            spin_op += splus_sminus    
+
+            
+            # Term 2: Sz_p * Sz_q 
+            sz_p_sz_q = 1/4 * (
+            FermionOperator(((p_alpha, 1), (p_alpha, 0), (q_alpha, 1), (q_alpha, 0)))
+            - FermionOperator(((p_alpha, 1), (p_alpha, 0), (q_beta, 1), (q_beta, 0)))
+            - FermionOperator(((p_beta, 1), (p_beta, 0), (q_alpha, 1), (q_alpha, 0)))
+            + FermionOperator(((p_beta, 1), (p_beta, 0), (q_beta, 1), (q_beta, 0)))
+            )
+            spin_op += sz_p_sz_q
+
+        
+
+        # Term 3: -Sz_p
+        sz_p = - 1/2 * (FermionOperator(((p_alpha, 1), (p_alpha, 0))) - FermionOperator(((p_beta, 1), (p_beta, 0))))
+        spin_op += sz_p
+
+    return spin_op
+
+
+
+
+
+
 ############# OPTIMISER ################
-#@profile
 def energy_optimise(objective_function, initial_params, opt_method: str, opt_iter: int):
     """This does the optimisation
     Args:
